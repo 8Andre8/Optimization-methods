@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <math.h>
+#include <stdlib.h>
+
 
 #define M 4
 #define N1 1
@@ -11,8 +13,7 @@ void prepare(float mas[M][N], int m, int n);
 void print_task(float mas[M][N], int m, int n);
 void read_cb(int mas_cb[M1][N1], int m, int n);
 float scalar(float mas[M][N], int mas_cb[M1][N1], int c);
-int delta(float mas[M][N], int mas_cb[M1][N1], int n);
-int key_element(float mas[M][N], int n, int max_col);
+void delta(float mas[M][N], float mas2[M][N], int mas_cb[M1][N1],float coeff[N - 1], int n_bas[M - 1], int n, int *cycle);
 void change(float mas[M][N], float mas2[M][N], int m, int n, int r, int k);
 
 int main(){
@@ -20,21 +21,21 @@ int main(){
 	float coeff[N - 1] = {0, 8, 0, 7, 0, 1};
 	int n_bas[M - 1] = {0, 2, 4};
 	int mas_cb[M1][N1];
-	int max_col, min_row;
+	int max_col, min_row, cycle = 1;
 	prepare(mas, M, N);
 	read_m(mas, M, N);
+	printf("\n");
+	printf("Исходные условия задачи:\n");
 	print_task(mas, M, N);
 	read_cb(mas_cb, M1, N1);
-
-	max_col = delta(mas, mas_cb, N);
-	printf("max_col = %d\n", max_col);
-	min_row = key_element(mas, N, max_col);
-	n_bas[min_row] = max_col;
-	printf("min_row = %d\n", min_row);
-	change(mas, mas2, M, N, min_row, max_col);
-
-	print_task(mas, M, N);
-	printf("Базис: %dx %dx %dx\n", n_bas[0] + 1, n_bas[1] + 1, n_bas[2] + 1);
+	while (cycle){
+		delta(mas, mas2, mas_cb, coeff, n_bas, N, &cycle);
+	}
+	printf("\n");
+	printf("Базис: x%d, x%d, x%d\n", n_bas[0] + 1, n_bas[1] + 1, n_bas[2] + 1);
+	printf("Коэффициенты базиса: %d, %d, %d\n", mas_cb[0][0], mas_cb[1][0], mas_cb[2][0]);
+	printf("F(max) = %.0f\n", mas_cb[0][0] * mas[0][N-1] + mas_cb[1][0] * mas[1][N-1] + mas_cb[2][0] * mas[2][N-1]);
+	
 }
 
 void prepare(float mas[M][N], int m, int n){
@@ -93,40 +94,55 @@ float scalar(float mas[M][N], int mas_cb[M1][N1], int c){
 	return x;
 }
 
-int delta(float mas[M][N], int mas_cb[M1][N1], int n){
-	float s, max = 1e-6;
-	int k = 0, max_col;
-	for (int j = 0; j < N - 1; j++){
+void delta(float mas[M][N], float mas2[M][N], int mas_cb[M1][N1], float coeff[N - 1], int n_bas[M - 1], int n, int *cycle){
+	float s, max = 1e-6, min = 1e6;
+	int k = 0, max_col, min_row;
+	for (int j = 0; j < n - 1; j++){
 		s = scalar(mas, mas_cb, j) - mas[M-1][j];
-		if (fabs(s) > max){
+		if (s >= 0){
+			k++;
+		}
+		else{
+			if (fabs(s) > max){
 			max = fabs(s);
 			max_col = j;
-		}
-		if (s < 0){
-			k++;
+			}
 		} 
+		// end check
+		if (k == n - 1){
+			printf("\n");
+			printf("После преобразований :\n");
+			print_task(mas, M, N);
+			*cycle = 0;
+			break;
+		}
 	}
-	// end check
-	if (k == N - 1){	
-		print_task(mas, M, N);
-	}
-	return max_col;
-}
-
-int key_element(float mas[M][N], int n, int max_col){
-	float s, min = 1e6;
-	int min_row;
-	for (int i = 0; i < M - 1; i++){
+	k = 0;
+	max = 1e-6;
+	min = 1e6;
+	for (int i = 0; i < m - 1; i++){
+		if (mas[i][max_col] > 0){
 		s = mas[i][N-1] / mas[i][max_col];
+		}
+		else{
+			continue;
+		}
 		if (s < min){
 			min = s;
 			min_row = i;
 		}
 	}
-	return min_row;
+	n_bas[min_row] = max_col;
+	mas_cb[min_row][0] = coeff[max_col];
+	change(mas, mas2, M, N, min_row, max_col);
 }
 
 void change(float mas[M][N], float mas2[M][N], int m, int n, int r, int k){
+	for (int i = 0; i < m - 1 ; i++){
+		for (int j = 0; j < n; j++){
+			mas2[i][j] = mas[i][j];
+		}
+	}
 	for (int i = 0; i < m - 1; i++){
 		for (int j = 0; j < n; j++){
 			if (i == r){
@@ -137,7 +153,6 @@ void change(float mas[M][N], float mas2[M][N], int m, int n, int r, int k){
 				mas2[i][j] = mas[i][j] - (mas[r][j] / mas[r][k]) * mas[i][k];
 				mas2[i][N - 1] = mas[i][N - 1] - (mas[r][N - 1] / mas[r][k]) * mas[i][k];
 			} 
-	
 		}
 	}
 	for (int i = 0; i < m - 1 ; i++){
