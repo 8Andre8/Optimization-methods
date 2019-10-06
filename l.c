@@ -2,7 +2,6 @@
 #include <math.h>
 #include <stdlib.h>
 
-
 #define M 4
 #define N1 1
 #define M1 3
@@ -35,7 +34,6 @@ int main(){
 	printf("Базис: x%d, x%d, x%d\n", n_bas[0] + 1, n_bas[1] + 1, n_bas[2] + 1);
 	printf("Коэффициенты базиса: %d, %d, %d\n", mas_cb[0][0], mas_cb[1][0], mas_cb[2][0]);
 	printf("F(max) = %.0f\n", mas_cb[0][0] * mas[0][N-1] + mas_cb[1][0] * mas[1][N-1] + mas_cb[2][0] * mas[2][N-1]);
-	
 }
 
 void prepare(float mas[M][N], int m, int n){
