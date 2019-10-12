@@ -12,8 +12,10 @@ void prepare(float mas[M][N], int m, int n);
 void print_task(float mas[M][N], int m, int n);
 void read_cb(int mas_cb[M1][N1], int m, int n);
 float scalar(float mas[M][N], int mas_cb[M1][N1], int c);
-void delta(float mas[M][N], float mas2[M][N], int mas_cb[M1][N1],float coeff[N - 1], int n_bas[M - 1], int n, int *cycle);
+void delta(float mas[M][N], float mas2[M][N], int mas_cb[M1][N1],float coeff[N - 1], int n_bas[M - 1], int m, int n, int *cycle);
 void change(float mas[M][N], float mas2[M][N], int m, int n, int r, int k);
+void left(float mas[M][N], float mas2[M][N], int mas_cb[M1][N1],float coeff[N - 1], int n_bas[M - 1]);
+void right(float mas[M][N], float mas2[M][N], int mas_cb[M1][N1],float coeff[N - 1], int n_bas[M - 1]);
 
 int main(){
 	float mas[M][N], mas2[M][N];
@@ -27,13 +29,20 @@ int main(){
 	printf("Исходные условия задачи:\n");
 	print_task(mas, M, N);
 	read_cb(mas_cb, M1, N1);
+	
 	while (cycle){
-		delta(mas, mas2, mas_cb, coeff, n_bas, N, &cycle);
+		delta(mas, mas2, mas_cb, coeff, n_bas, M, N, &cycle);
 	}
+	printf("\n");
+	printf("После преобразований :\n");
+	print_task(mas, M, N);
 	printf("\n");
 	printf("Базис: x%d, x%d, x%d\n", n_bas[0] + 1, n_bas[1] + 1, n_bas[2] + 1);
 	printf("Коэффициенты базиса: %d, %d, %d\n", mas_cb[0][0], mas_cb[1][0], mas_cb[2][0]);
-	printf("F(max) = %.0f\n", mas_cb[0][0] * mas[0][N-1] + mas_cb[1][0] * mas[1][N-1] + mas_cb[2][0] * mas[2][N-1]);
+	printf("F(max) = %.3f\n", mas_cb[0][0] * mas[0][N-1] + mas_cb[1][0] * mas[1][N-1] + mas_cb[2][0] * mas[2][N-1]);
+// проверка устойчивости
+	left(mas, mas2, mas_cb, coeff, n_bas);
+	right(mas, mas2, mas_cb, coeff, n_bas);
 }
 
 void prepare(float mas[M][N], int m, int n){
@@ -76,7 +85,7 @@ void print_task(float mas[M][N], int m, int n){
 		}
 	}
 }
-
+// чтение коэффициентов базиса
 void read_cb(int mas_cb[M1][N1], int m, int n){
 	char file[] = "cb.txt";
 	FILE *p = fopen(file, "r");
@@ -96,7 +105,7 @@ float scalar(float mas[M][N], int mas_cb[M1][N1], int c){
 	return x;
 }
 
-void delta(float mas[M][N], float mas2[M][N], int mas_cb[M1][N1], float coeff[N - 1], int n_bas[M - 1], int n, int *cycle){
+void delta(float mas[M][N], float mas2[M][N], int mas_cb[M1][N1], float coeff[N - 1], int n_bas[M - 1], int m, int n, int *cycle){
 	float s, max = 1e-6, min = 1e6;
 	int k = 0, max_col, min_row;
 	for (int j = 0; j < n - 1; j++){
@@ -110,11 +119,8 @@ void delta(float mas[M][N], float mas2[M][N], int mas_cb[M1][N1], float coeff[N 
 			max_col = j;
 			}
 		} 
-		// end check
+		// конец цикла
 		if (k == n - 1){
-			printf("\n");
-			printf("После преобразований :\n");
-			print_task(mas, M, N);
 			*cycle = 0;
 			break;
 		}
@@ -162,4 +168,84 @@ void change(float mas[M][N], float mas2[M][N], int m, int n, int r, int k){
 			mas[i][j] = mas2[i][j];
 		}
 	}
+}
+
+void left(float mas[M][N], float mas2[M][N], int mas_cb[M1][N1],float coeff[N - 1], int n_bas[M - 1]){
+	int cycle, k = 0;
+	float c, e = 5e-3;
+	for (int i = 1; i <= 1000; i++){
+		cycle = 1;
+		c = mas[0][N - 1]; 
+		read_m(mas, M, N);
+		mas_cb[0][0] = 0; mas_cb[1][0] = 0; mas_cb[2][0] = 0; 
+		n_bas[0] = 0; n_bas[1] = 2; n_bas[2] = 4;
+		mas[M - 1][1] = mas[M - 1][1] - e*i;
+		while (cycle){
+			k++;
+			if (k == 1000){
+				printf("\n");
+				printf("Левая граница устойчивости не найдена (зацикливание)");
+				printf("\n");
+				exit(0);
+			}
+			delta(mas, mas2, mas_cb, coeff, n_bas, M, N, &cycle);	
+		}
+		// проверка изменения оптимального плана
+		if (c != mas[0][N - 1]){
+			break;
+		}
+		c = mas[0][N - 1];
+		if (i == 1000){
+			printf("Смены оптимального плана не произошло\n");	
+		}
+	}
+	printf("\n");
+	printf("Смена оптимального плана (левая граница) :\n");
+	print_task(mas, M, N);
+	printf("\n");
+	printf("Базис: x%d, x%d, x%d\n", n_bas[0] + 1, n_bas[1] + 1, n_bas[2] + 1);
+	printf("Коэффициенты базиса: %d, %d, %d\n", mas_cb[0][0], mas_cb[1][0], mas_cb[2][0]);
+	printf("F(max) = %.3f\n", mas[M - 1][n_bas[0]] * mas[0][N - 1] + mas[M - 1][n_bas[1]] * mas[1][N - 1] + mas[M - 1][n_bas[2]] * mas[2][N - 1]);
+	printf("\n");
+	printf("Левая граница устойчивости коэффициента с2: %.3f\n", mas[M - 1][1] + e*2);
+}
+
+void right(float mas[M][N], float mas2[M][N], int mas_cb[M1][N1],float coeff[N - 1], int n_bas[M - 1]){
+	int cycle, k = 0;
+	float c, e = 5e-3;
+	for (int i = 1; i <= 1000; i++){
+		cycle = 1;
+		c = mas[0][N - 1];
+		read_m(mas, M, N);
+		mas_cb[0][0] = 0; mas_cb[1][0] = 0; mas_cb[2][0] = 0; 
+		n_bas[0] = 0; n_bas[1] = 2; n_bas[2] = 4;
+		mas[M - 1][1] = mas[M - 1][1] + e*i;
+		while (cycle){
+			k++;
+			if (k == 1000){
+				printf("\n");
+				printf("Правая граница устойчивости не найдена (зацикливание)");
+				printf("\n");
+				exit(0);
+			}
+			delta(mas, mas2, mas_cb, coeff, n_bas, M, N, &cycle);	
+		}
+		// проверка изменения оптимального плана
+		if (c != mas[0][N - 1]){
+			break;
+		}
+		c = mas[0][N - 1];
+		if (i == 1000){
+			printf("Смены оптимального плана не произошло\n");	
+		}
+	}
+	printf("\n");
+	printf("Смена оптимального плана (правая граница) :\n");
+	print_task(mas, M, N);
+	printf("\n");
+	printf("Базис: x%d, x%d, x%d\n", n_bas[0] + 1, n_bas[1] + 1, n_bas[2] + 1);
+	printf("Коэффициенты базиса: %d, %d, %d\n", mas_cb[0][0], mas_cb[1][0], mas_cb[2][0]);
+	printf("F(max) = %.3f\n", mas[M - 1][n_bas[0]] * mas[0][N - 1] + mas[M - 1][n_bas[1]] * mas[1][N - 1] + mas[M - 1][n_bas[2]] * mas[2][N - 1]);
+	printf("\n");
+	printf("Правая граница устойчивости коэффициента с2: %.6f\n", mas[M - 1][1] - e*2);
 }
