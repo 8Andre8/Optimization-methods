@@ -249,4 +249,3 @@ void right(float mas[M][N], float mas2[M][N], int mas_cb[M1][N1],float coeff[N -
 	printf("\n");
 	printf("Правая граница устойчивости коэффициента с2: %.6f\n", mas[M - 1][1] - e*2);
 }
-//
