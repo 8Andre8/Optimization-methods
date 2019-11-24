@@ -1,138 +1,127 @@
-/*--------------------------------------------------------------*
-                 TableCurve C Code Output
-         To modify generated output, edit C.TCL
- *--------------------------------------------------------------*/
-
-#include <math.h>
 #include <stdio.h>
-#include <stdlib.h>
+#include <math.h>
 
-#define A 2
-#define B 9
-#define E 1e-3
-#define DELTA 1e-4
-#define TAU 1.6180339898954989
+#define EPS 1e-4
+#define ALPHA 1.0
+#define BETA 0.5
+#define GAMMA 2.0 
+#define n  1
 
-double func(double x);
-void dih(double a, double b, double e, double delta);
-void golden_cut(double a, double b, double e);
-void fib(double a, double b, double e);
+double func(double x1, double x2);
+void best_and_worst(double x[3][2], double *fl, double *fh, int *min, int *max);
+void center_of_gravity(double x[4][2], int max);
+void reflection(double x[5][2], int max);
+void stretching(double x[6][2], double fl, int min, int max);
+void compression(double x[7][2], int min, int max, double fl, double fh);
+void reduction(double x[3][2], int min);
 
-void main()
-{
- // double x,y;
-  //char str[80];
- /* while(1){
-    printf("Enter x: ");
-    fgets(str, 80, stdin);
-    if(!*str) break;
-    sscanf(str,"%lg",&x);
-    y=func(x);
-    printf("      y=%.15lg\n", y);
-    }*/
-  dih(A, B, E, DELTA); 
-  golden_cut(A, B, E);
-  fib(A, B, E);
-}
- 
-
-/*--------------------------------------------------------------*/
-double func(double x)
-/*--------------------------------------------------------------*
-   TableCurve Function: G:\\Lab1\\Andreev\\1.c Oct 14, 2019 9:23:06 AM 
-   G:\\Lab1\\Andreev\\dan.txt 
-   X=  
-   Y=  
-   Eqn# 6726  y=a+bx^2+cx^4+dx^6+ex^8+fx^(10)+gx^(12)+hx^(14) 
-   r2=0.9999945833983647 
-   r2adj=0.9999566671869173 
-   StdErr=0.01520383122806203 
-   Fstat=26373.80015631564 
-   a= 7.109166870372088 
-   b= -1.166251457154598 
-   c= 0.1115184436418672 
-   d= -0.005706215991369096 
-   e= 0.0001583607783355519 
-   f= -2.365219422087485E-06 
-   g= 1.787233437054821E-08 
-   h= -5.347670439943148E-11 
- *--------------------------------------------------------------*/
-{
-  double y;
-  x=x*x;
-  y=7.109166870372088+x*(-1.166251457154598+
-    x*(0.1115184436418672+x*(-0.005706215991369096+
-    x*(0.0001583607783355519+x*(-2.365219422087485E-06+
-    x*(1.787233437054821E-08+x*-5.347670439943148E-11))))));
-  return(y);
-}
- 
-void dih(double a, double b, double e, double delta){
-  double u1, u2, f1, f2, x, y;
-  int i = 0;
-  while (fabs(b - a) > e){
-    i++;
-    u1 = (a + b - delta) / (double)2;
-    u2 = a + b - u1;
-    f1 = func(u1);
-    f2 = func(u2);
-    if (f1 < f2){
-      b = u2;
-    }
-    else if (f1 > f2){
-      a = u1;
-    }
-    else{
-      a = u1;
-      b = u2;
-    }
-    x = (b + a) / (double)2;
-    y = func(x);
-  }
-  printf("Метод дихотомии: f(min) = %lf, x = %lf, количество итераций : %d\n", y, x, i);
-} 
-
-void golden_cut(double a, double b, double e){
-  double u1, u2, f1, f2, x, y;
-  int i = 0;
-  while (fabs(b - a) > e){
-    i++;
-    u1 = a + (3 - sqrt(5)) / 2 * (b - a);
-    u2 = a + b - u1;
-    f1 = func(u1);
-    f2 = func(u2);
-    if (f1 <= f2){
-      b = u2;  
-    }
-    else{
-      a = u1;
-    }
-  }
-  x = (a + b) / (double)2;
-  y = func(x);
-  printf("Метод золотого сечения: f(min) = %lf, x = %lf, количество итераций : %d\n", y, x, i);
+void main(){
+    double x[7][2];
+    double fl, fh, sum, kr = 1e6;
+    int min, max;
+    x[0][0] =  10;  x[0][1] =  20;
+    x[1][0] =  -20;  x[1][1] = 10;
+    x[2][0] = -10;  x[2][1] = -10;
+  //  do{
+      for (int i = 0; i < 100; i++){
+        best_and_worst(x, &fl, &fh, &min, &max);
+        center_of_gravity(x, max);
+        reflection(x, max);
+        if (func(x[n + 3][0], x[n + 3][1]) <= fl){
+            stretching(x, fl, min, max);
+            perror("stretch");
+            goto pr;
+        }
+        else{
+            compression(x, min, max, fl, fh);
+        }
+        pr:
+        sum = 0;
+        for (int i = 0; i < 3; i++){
+            sum += pow(func(x[i][0], x[i][1]) - func(x[n + 2][0], x[n + 2][1]), 2);
+        }
+        kr = sqrt(sum / 3.0);
+        printf("fl = %lf \n", fl);
+        printf("fh = %lf \n", fh);
+        printf("kr = %lf \n", kr);
+      }
+    //}while (kr > EPS);
+    
+    printf("fl = %.3lf, x1 = %.3lf, x2 = %.3lf\n", fl, x[max][0], x[max][1]);
 }
 
-void fib(double a, double b, double e){
-  double u1, u2, f1, f2, x, y;
-  int i = 0, f_n = 1, f_1n = 1, f_2n = 2;
-  while (fabs(b - a) > e){
-    i++;
-    u1 = a + (double)f_n / f_2n * (b - a);
-    u2 = a + (double)f_1n / f_2n * (b - a);
-    f_n = f_1n;
-    f_1n = f_2n;
-    f_2n = f_n + f_1n;
-    f1 = func(u1);
-    f2 = func(u2);
-    if (f1 <= f2){
-      b = u2;  
+double func(double x1, double x2){  
+    return 3 * pow(x1 + 5, 2) + 3 * pow(x2 - 3, 2) + 3 * x1 * x2;
+}
+
+void center_of_gravity(double x[4][2], int max){
+    x[n + 2][0] = 0;
+    x[n + 2][1] = 0;
+    for (int i = 0; i < 3; i++){
+        x[n + 2][0] += x[i][0];
+        x[n + 2][1] += x[i][1];
+    }
+    x[n + 2][0] = (x[n + 2][0] - x[max][0]) / 2.0;
+    x[n + 2][1] = (x[n + 2][1] - x[max][1]) / 2.0;
+}
+
+void best_and_worst(double x[3][2], double *fl, double *fh, int *min, int *max){
+    double f[3];
+    *fl = func(x[0][0], x[0][1]);
+    *fh = *fl;
+    for (int i = 0; i < 3; i++){
+        f[i] = func(x[i][0], x[i][1]);
+        if (f[i] < *fl){
+            *fl = f[i];
+            *min = i;
+        }
+        if (f[i] > *fh){
+            *fh = f[i];
+            *max = i;
+        } 
+    }
+}
+
+void reflection(double x[5][2], int max){
+    x[n + 3][0] = x[n + 2][0] + ALPHA * (x[n + 2][0] - x[max][0]);
+    x[n + 3][1] = x[n + 2][1] + ALPHA * (x[n + 2][1] - x[max][1]);
+}
+
+void stretching(double x[6][2], double fl, int min, int max){
+    double f;
+    x[n + 4][0] = x[n + 2][0] + GAMMA * (x[n + 3][0] - x[n + 2][0]);
+    x[n + 4][1] = x[n + 2][1] + GAMMA * (x[n + 3][1] - x[n + 2][1]);
+    f = func(x[n + 4][0], x[n + 4][1]);
+    if (f <= fl){
+        x[max][0] = x[n + 4][0];
+        x[max][1] = x[n + 4][1];
     }
     else{
-      a = u1;
+        x[max][0] = x[n + 3][0];
+        x[max][1] = x[n + 3][1];   
     }
-  }
-  x = (a + b) / (double)2;
-  y = func(x);
-  printf("Метод Фибоначчи: f(min) = %lf, x = %lf, количество итераций : %d\n", y, x, i);
+}
+
+void compression(double x[7][2], int min, int max, double fl, double fh){
+    x[n + 5][0] = x[n + 2][0] + BETA * (x[max][0] - x[n + 2][0]);
+    x[n + 5][1] = x[n + 2][1] + BETA * (x[max][1] - x[n + 2][1]);
+    if (func(x[n + 5][0], x[n + 5][1]) < fh){
+        x[max][0] = x[n + 5][0];
+        x[max][1] = x[n + 5][1];
+        perror("comp");
+    }
+    if (func(x[n + 5][0], x[n + 5][1]) > fh){
+        reduction(x, min);
+        perror("red");
+    }
+
+}
+
+void reduction(double x[3][2], int min){
+    for (int i = 0; i < 3; i++){
+        if(i != min){
+            x[i][0] += 0.5 * (x[i][0] - x[min][0]);
+            x[i][1] += 0.5 * (x[i][1] - x[min][1]);
+        }
+    }
 }
