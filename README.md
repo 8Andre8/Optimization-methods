@@ -1,2 +1,2 @@
 # Optimization-methods
-Laboratory works on the theory of optimization.
+Laboratory works of the theory of optimization.
